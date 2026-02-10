@@ -1,5 +1,6 @@
 import { useChatStore } from "../store/useChatStore";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { X, Pencil, Trash, Check } from "lucide-react";
 
 import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
@@ -15,9 +16,14 @@ const ChatContainer = () => {
     selectedUser,
     subscribeToMessages,
     unsubscribeFromMessages,
+    deleteMessage,
+    editMessage,
   } = useChatStore();
   const { authUser } = useAuthStore();
   const messageEndRef = useRef(null);
+
+  const [editingMessageId, setEditingMessageId] = useState(null);
+  const [editedText, setEditedText] = useState("");
 
   useEffect(() => {
     getMessages(selectedUser._id);
@@ -32,6 +38,19 @@ const ChatContainer = () => {
       messageEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
+
+  const handleEditClick = (message) => {
+    setEditingMessageId(message._id);
+    setEditedText(message.text);
+  };
+
+  const handleUpdateMessage = async (messageId) => {
+    if (editedText.trim()) {
+      await editMessage(messageId, editedText);
+    }
+    setEditingMessageId(null);
+    setEditedText("");
+  };
 
   if (isMessagesLoading) {
     return (
@@ -51,7 +70,7 @@ const ChatContainer = () => {
         {messages.map((message) => (
           <div
             key={message._id}
-            className={`chat ${message.senderId === authUser._id ? "chat-end" : "chat-start"}`}
+            className={`chat ${message.senderId === authUser._id ? "chat-end" : "chat-start"} group`}
             ref={messageEndRef}
           >
             <div className=" chat-image avatar">
@@ -71,7 +90,8 @@ const ChatContainer = () => {
                 {formatMessageTime(message.createdAt)}
               </time>
             </div>
-            <div className="chat-bubble flex flex-col">
+
+            <div className={`chat-bubble flex flex-col ${message.senderId === authUser._id ? "bg-primary text-primary-content" : "bg-base-200"}`}>
               {message.image && (
                 <img
                   src={message.image}
@@ -79,8 +99,54 @@ const ChatContainer = () => {
                   className="sm:max-w-[200px] rounded-md mb-2"
                 />
               )}
-              {message.text && <p>{message.text}</p>}
+
+              {editingMessageId === message._id ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    className="input input-sm input-bordered w-full max-w-xs text-black"
+                    value={editedText}
+                    onChange={(e) => setEditedText(e.target.value)}
+                    autoFocus
+                  />
+                  <button onClick={() => handleUpdateMessage(message._id)} className="btn btn-xs btn-circle btn-success">
+                    <Check size={14} />
+                  </button>
+                  <button onClick={() => setEditingMessageId(null)} className="btn btn-xs btn-circle btn-error">
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : (
+                <div className="relative">
+                  {message.text && <p>{message.text}</p>}
+                  {message.isEdited && (
+                    <span className="text-[10px] opacity-70 block text-right mt-1">
+                      (edited)
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
+
+            {/* Actions for own messages */}
+            {message.senderId === authUser._id && !editingMessageId && (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2 mt-1">
+                <button
+                  onClick={() => handleEditClick(message)}
+                  className="btn btn-ghost btn-xs text-info"
+                  title="Edit"
+                >
+                  <Pencil size={14} />
+                </button>
+                <button
+                  onClick={() => deleteMessage(message._id)}
+                  className="btn btn-ghost btn-xs text-error"
+                  title="Delete"
+                >
+                  <Trash size={14} />
+                </button>
+              </div>
+            )}
           </div>
         ))}
       </div>
