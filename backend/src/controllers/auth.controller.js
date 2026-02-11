@@ -4,9 +4,9 @@ import bcrypt from "bcryptjs";
 import cloudinary from "../lib/cloudinary.js";
 
 export const signup = async (req, res) => {
-  const { fullName, email, password } = req.body;
+  const { fullName, email, password, mobile } = req.body;
   try {
-    if (!fullName || !email || !password) {
+    if (!fullName || !email || !password || !mobile) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
@@ -15,8 +15,10 @@ export const signup = async (req, res) => {
     }
 
     const user = await User.findOne({ email });
-
     if (user) return res.status(400).json({ message: "Email already exists" });
+
+    const existingMobile = await User.findOne({ mobile });
+    if (existingMobile) return res.status(400).json({ message: "Mobile number already exists" });
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
@@ -25,6 +27,7 @@ export const signup = async (req, res) => {
       fullName,
       email,
       password: hashedPassword,
+      mobile,
     });
 
     if (newUser) {
@@ -36,6 +39,7 @@ export const signup = async (req, res) => {
         _id: newUser._id,
         fullName: newUser.fullName,
         email: newUser.email,
+        mobile: newUser.mobile,
         profilePic: newUser.profilePic,
       });
     } else {
@@ -85,19 +89,109 @@ export const logout = (req, res) => {
   }
 };
 
-export const updateProfile = async (req, res) => {
-  try {
-    const { profilePic } = req.body;
-    const userId = req.user._id;
+export const sendOtp = async (req, res) => {
+  const { mobile } = req.body;
+  if (!mobile) return res.status(400).json({ message: "Mobile number is required" });
 
-    if (!profilePic) {
-      return res.status(400).json({ message: "Profile pic is required" });
+  try {
+    // Generate 6 digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Hash OTP
+    const salt = await bcrypt.genSalt(10);
+    const otpHash = await bcrypt.hash(otp, salt);
+
+    // Expiry 5 mins
+    const otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
+
+    // Find user and update, or upsert
+    let user = await User.findOne({ mobile });
+
+    if (user) {
+      user.otp = otpHash;
+      user.otpExpiry = otpExpiry;
+      await user.save();
+    } else {
+      return res.status(404).json({ message: "User not found. Please sign up first." });
     }
 
-    const uploadResponse = await cloudinary.uploader.upload(profilePic);
+    // SIMULATE SMS SENDING
+    console.log(`=========================================`);
+    console.log(`MOBILE LOGIN OTP for ${mobile}: ${otp}`);
+    console.log(`=========================================`);
+
+    res.status(200).json({ message: "OTP sent successfully" });
+
+  } catch (error) {
+    console.log("Error in sendOtp controller", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+export const verifyOtp = async (req, res) => {
+  const { mobile, otp } = req.body;
+  try {
+    const user = await User.findOne({ mobile });
+    if (!user) {
+      return res.status(400).json({ message: "User not found" });
+    }
+
+    if (user.otpExpiry < Date.now()) {
+      return res.status(400).json({ message: "OTP expired" });
+    }
+
+    const isMatch = await bcrypt.compare(otp, user.otp);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    // Clear OTP
+    user.otp = undefined;
+    user.otpExpiry = undefined;
+    await user.save();
+
+    generateToken(user._id, res);
+
+    res.status(200).json({
+      _id: user._id,
+      fullName: user.fullName,
+      email: user.email,
+      profilePic: user.profilePic,
+      mobile: user.mobile,
+      isGhostMode: user.isGhostMode,
+      interests: user.interests,
+      bio: user.bio,
+      age: user.age,
+      gender: user.gender,
+    });
+
+  } catch (error) {
+    console.log("Error in verifyOtp controller", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+export const updateProfile = async (req, res) => {
+  try {
+    const { profilePic, interests, isGhostMode, bio, age, gender } = req.body;
+    const userId = req.user._id;
+
+    let updateData = {};
+
+    if (profilePic) {
+      const uploadResponse = await cloudinary.uploader.upload(profilePic);
+      updateData.profilePic = uploadResponse.secure_url;
+    }
+
+    if (interests !== undefined) updateData.interests = interests;
+    if (isGhostMode !== undefined) updateData.isGhostMode = isGhostMode;
+    if (bio !== undefined) updateData.bio = bio;
+    if (age !== undefined) updateData.age = age;
+    if (gender !== undefined) updateData.gender = gender;
+
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      { profilePic: uploadResponse.secure_url },
+      updateData,
       { new: true }
     );
 

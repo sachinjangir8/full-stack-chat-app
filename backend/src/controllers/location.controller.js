@@ -36,18 +36,38 @@ export const getNearbyUsers = async (req, res) => {
             return res.status(400).json({ message: "User location not set" });
         }
 
-        const nearbyUsers = await User.find({
-            location: {
-                $near: {
-                    $geometry: {
+        const nearbyUsers = await User.aggregate([
+            {
+                $geoNear: {
+                    near: {
                         type: "Point",
                         coordinates: currentUser.location.coordinates,
                     },
-                    $maxDistance: 500, // 500 meters
+                    distanceField: "distance",
+                    maxDistance: 500, // 500 meters
+                    spherical: true,
+                    key: "location",
                 },
             },
-            _id: { $ne: userId }, // Exclude current user
-        }).select("-password");
+            {
+                $match: {
+                    _id: { $ne: currentUser._id }, // Exclude current user
+                    isGhostMode: { $ne: true },   // Exclude ghost mode users
+                },
+            },
+            {
+                $project: {
+                    _id: 1,
+                    fullName: 1,
+                    profilePic: 1,
+                    interests: 1,
+                    bio: 1,
+                    age: 1,
+                    gender: 1,
+                    distance: 1, // Return distance in meters
+                },
+            },
+        ]);
 
         res.status(200).json(nearbyUsers);
     } catch (error) {

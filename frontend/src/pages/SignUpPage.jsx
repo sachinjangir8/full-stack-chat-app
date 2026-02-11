@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAuthStore } from "../store/useAuthStore";
-import { Eye, EyeOff, Loader2, Lock, Mail, MessageSquare, User } from "lucide-react";
+import { Eye, EyeOff, Loader2, Lock, Mail, MessageSquare, User, Smartphone } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import AuthImagePattern from "../components/AuthImagePattern";
@@ -12,6 +12,7 @@ const SignUpPage = () => {
     fullName: "",
     email: "",
     password: "",
+    mobile: "",
   });
 
   const { signup, isSigningUp } = useAuthStore();
@@ -20,6 +21,8 @@ const SignUpPage = () => {
     if (!formData.fullName.trim()) return toast.error("Full name is required");
     if (!formData.email.trim()) return toast.error("Email is required");
     if (!/\S+@\S+\.\S+/.test(formData.email)) return toast.error("Invalid email format");
+    if (!formData.mobile) return toast.error("Mobile number is required");
+    if (formData.mobile.length < 10) return toast.error("Mobile number must be at least 10 digits");
     if (!formData.password) return toast.error("Password is required");
     if (formData.password.length < 6) return toast.error("Password must be at least 6 characters");
 
@@ -86,6 +89,24 @@ const SignUpPage = () => {
                   placeholder="you@example.com"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-medium">Mobile Number</span>
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Smartphone className="size-5 text-base-content/40" />
+                </div>
+                <input
+                  type="tel"
+                  className={`input input-bordered w-full pl-10`}
+                  placeholder="1234567890"
+                  value={formData.mobile}
+                  onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
                 />
               </div>
             </div>

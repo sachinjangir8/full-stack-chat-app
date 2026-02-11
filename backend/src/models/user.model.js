@@ -13,13 +13,57 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: true,
+      required: false, // Not required if logging in via OTP
       minlength: 6,
+    },
+    mobile: {
+      type: String,
+      unique: true,
+      sparse: true, // Allows null/undefined values to duplicate (for email-only users)
+    },
+    otp: {
+      type: String,
+    },
+    otpExpiry: {
+      type: Date,
     },
     profilePic: {
       type: String,
       default: "",
     },
+    isGhostMode: {
+      type: Boolean,
+      default: false,
+    },
+    interests: {
+      type: [String],
+      default: [],
+    },
+    bio: {
+      type: String,
+      default: "",
+    },
+    age: {
+      type: Number,
+    },
+    gender: {
+      type: String,
+      enum: ["Male", "Female", "Other", ""],
+      default: "",
+    },
+    friendRequests: [
+      {
+        from: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+        status: {
+          type: String,
+          enum: ["pending", "rejected"],
+          default: "pending",
+        },
+      },
+    ],
     location: {
       type: {
         type: String,
@@ -27,7 +71,6 @@ const userSchema = new mongoose.Schema(
       },
       coordinates: {
         type: [Number], // [longitude, latitude]
-        index: "2dsphere",
       },
     },
     contacts: [

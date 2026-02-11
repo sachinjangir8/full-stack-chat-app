@@ -74,31 +74,72 @@ const ProfilePage = () => {
               <p className="px-4 py-2.5 bg-base-200 rounded-lg border">{authUser?.fullName}</p>
             </div>
 
-            <div className="space-y-1.5">
-              <div className="text-sm text-zinc-400 flex items-center gap-2">
-                <Mail className="w-4 h-4" />
-                Email Address
-              </div>
-              <p className="px-4 py-2.5 bg-base-200 rounded-lg border">{authUser?.email}</p>
+            <div className="text-sm text-zinc-400 flex items-center gap-2">
+              <Mail className="w-4 h-4" />
+              Email Address
+            </div>
+            <p className="px-4 py-2.5 bg-base-200 rounded-lg border">{authUser?.email}</p>
+          </div>
+        </div>
+
+        <div className="space-y-6 bg-base-300 rounded-xl p-6">
+          <h2 className="text-lg font-medium mb-4">Interests</h2>
+          <div className="flex flex-col gap-3">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Add an interest (e.g. Hiking)"
+                className="input input-bordered w-full"
+                onKeyDown={async (e) => {
+                  if (e.key === "Enter" && e.target.value.trim()) {
+                    const newInterest = e.target.value.trim();
+                    const currentInterests = authUser.interests || [];
+                    if (!currentInterests.includes(newInterest)) {
+                      await updateProfile({ interests: [...currentInterests, newInterest] });
+                      e.target.value = "";
+                    }
+                  }
+                }}
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {authUser?.interests?.map((interest, index) => (
+                <div key={index} className="badge badge-primary gap-2 p-3">
+                  {interest}
+                  <button
+                    onClick={async () => {
+                      const newInterests = authUser.interests.filter((_, i) => i !== index);
+                      await updateProfile({ interests: newInterests });
+                    }}
+                    className="btn btn-xs btn-circle btn-ghost h-4 w-4 min-h-0"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+              {(!authUser?.interests || authUser.interests.length === 0) && (
+                <span className="text-sm text-zinc-500">No interests added yet.</span>
+              )}
             </div>
           </div>
+        </div>
 
-          <div className="mt-6 bg-base-300 rounded-xl p-6">
-            <h2 className="text-lg font-medium  mb-4">Account Information</h2>
-            <div className="space-y-3 text-sm">
-              <div className="flex items-center justify-between py-2 border-b border-zinc-700">
-                <span>Member Since</span>
-                <span>{authUser.createdAt?.split("T")[0]}</span>
-              </div>
-              <div className="flex items-center justify-between py-2">
-                <span>Account Status</span>
-                <span className="text-green-500">Active</span>
-              </div>
+        <div className="mt-6 bg-base-300 rounded-xl p-6">
+          <h2 className="text-lg font-medium  mb-4">Account Information</h2>
+          <div className="space-y-3 text-sm">
+            <div className="flex items-center justify-between py-2 border-b border-zinc-700">
+              <span>Member Since</span>
+              <span>{authUser.createdAt?.split("T")[0]}</span>
+            </div>
+            <div className="flex items-center justify-between py-2">
+              <span>Account Status</span>
+              <span className="text-green-500">Active</span>
             </div>
           </div>
         </div>
       </div>
     </div>
+
   );
 };
 export default ProfilePage;

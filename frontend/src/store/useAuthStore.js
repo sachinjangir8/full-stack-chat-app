@@ -82,6 +82,33 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
+  sendOtp: async (mobile) => {
+    try {
+      const res = await axiosInstance.post("/auth/send-otp", { mobile });
+      toast.success(res.data.message);
+      return true;
+    } catch (error) {
+      toast.error(error.response.data.message);
+      return false;
+    }
+  },
+
+  verifyOtp: async (mobile, otp) => {
+    set({ isLoggingIn: true });
+    try {
+      const res = await axiosInstance.post("/auth/verify-otp", { mobile, otp });
+      set({ authUser: res.data });
+      toast.success("Logged in successfully");
+      get().connectSocket();
+      return true;
+    } catch (error) {
+      toast.error(error.response.data.message);
+      return false;
+    } finally {
+      set({ isLoggingIn: false });
+    }
+  },
+
   connectSocket: () => {
     const { authUser } = get();
     if (!authUser || get().socket?.connected) return;
@@ -98,8 +125,24 @@ export const useAuthStore = create((set, get) => ({
     socket.on("getOnlineUsers", (userIds) => {
       set({ onlineUsers: userIds });
     });
+
+    socket.on("callUser", (data) => {
+      set({
+        isIncomingCall: true,
+        incomingCallData: data
+      });
+    });
+
+    socket.on("callEnded", () => {
+      set({ isIncomingCall: false, incomingCallData: null });
+    });
   },
   disconnectSocket: () => {
     if (get().socket?.connected) get().socket.disconnect();
   },
+
+  // Call State
+  isIncomingCall: false,
+  incomingCallData: null,
+  setIncomingCall: (state) => set({ isIncomingCall: state }),
 }));

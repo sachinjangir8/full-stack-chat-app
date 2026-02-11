@@ -43,6 +43,25 @@ const SettingsPage = () => {
           ))}
         </div>
 
+
+        {/* Privacy Section */}
+        <div className="flex flex-col gap-1 mt-6">
+          <h2 className="text-lg font-semibold">Privacy</h2>
+          <p className="text-sm text-base-content/70">Manage your visibility</p>
+        </div>
+        <div className="bg-base-200 rounded-lg p-4 flex items-center justify-between">
+          <div>
+            <h3 className="font-medium text-base">Ghost Mode</h3>
+            <p className="text-sm text-base-content/70">Hide your location from nearby users</p>
+          </div>
+          <input
+            type="checkbox"
+            className="toggle toggle-primary"
+            checked={false} // Todo: connect to authStore
+            onChange={() => { }} // Todo: connect to authStore
+          />
+        </div>
+
         {/* Preview Section */}
         <h3 className="text-lg font-semibold mb-3">Preview</h3>
         <div className="rounded-xl border border-base-300 overflow-hidden bg-base-100 shadow-lg">

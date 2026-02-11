@@ -1,10 +1,14 @@
-import { X } from "lucide-react";
+import { X, Video } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 
+import { useState } from "react";
+import CallModal from "./CallModal";
+
 const ChatHeader = () => {
   const { selectedUser, setSelectedUser } = useChatStore();
-  const { onlineUsers } = useAuthStore();
+  const { onlineUsers, authUser } = useAuthStore();
+  const [isCalling, setIsCalling] = useState(false);
 
   return (
     <div className="p-2.5 border-b border-base-300">
@@ -27,10 +31,27 @@ const ChatHeader = () => {
         </div>
 
         {/* Close button */}
-        <button onClick={() => setSelectedUser(null)}>
-          <X />
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setIsCalling(true)} className="btn btn-sm btn-circle btn-ghost">
+            <Video size={20} />
+          </button>
+          <button onClick={() => setSelectedUser(null)}>
+            <X />
+          </button>
+        </div>
       </div>
+
+      {isCalling && (
+        <CallModal
+          isIncoming={false}
+          call={{
+            userToCall: selectedUser._id,
+            name: selectedUser.fullName,
+            from: authUser._id
+          }}
+          onClose={() => setIsCalling(false)}
+        />
+      )}
     </div>
   );
 };
