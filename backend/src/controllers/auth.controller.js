@@ -2,6 +2,7 @@ import { generateToken } from "../lib/utils.js";
 import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import cloudinary from "../lib/cloudinary.js";
+import twilio from "twilio";
 
 export const signup = async (req, res) => {
   const { fullName, email, password, mobile } = req.body;
@@ -115,10 +116,14 @@ export const sendOtp = async (req, res) => {
       return res.status(404).json({ message: "User not found. Please sign up first." });
     }
 
-    // SIMULATE SMS SENDING
-    console.log(`=========================================`);
-    console.log(`MOBILE LOGIN OTP for ${mobile}: ${otp}`);
-    console.log(`=========================================`);
+    // Send OTP via Twilio
+    const client = new twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+
+    await client.messages.create({
+      body: `Your OTP for Chat App is: ${otp}`,
+      from: process.env.TWILIO_PHONE_NUMBER,
+      to: mobile,
+    });
 
     res.status(200).json({ message: "OTP sent successfully" });
 
