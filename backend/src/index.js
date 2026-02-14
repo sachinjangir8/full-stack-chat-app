@@ -23,7 +23,10 @@ app.use(express.urlencoded({ limit: "10mb", extended: true }));
 app.use(cookieParser());
 app.use(
   cors({
-    origin: "https://full-stack-chat-app-2-frontend.onrender.com",
+    origin: [
+      "http://localhost:5173",
+      "https://full-stack-chat-app-2-frontend.onrender.com",
+    ],
     credentials: true,
   })
 );
