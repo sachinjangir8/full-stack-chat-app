@@ -19,6 +19,7 @@ const PORT = process.env.PORT;
 const __dirname = path.resolve();
 
 app.use(express.json({ limit: "10mb" }));
+app.set("trust proxy", 1); // Trust Render's load balancer for secure cookies
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
 app.use(cookieParser());
 app.use(
