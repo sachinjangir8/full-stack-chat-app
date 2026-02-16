@@ -1,4 +1,4 @@
-import { X, Video } from "lucide-react";
+import { X, Video, ArrowLeft } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 
@@ -32,6 +32,14 @@ const ChatHeader = () => {
 
         {/* Close button */}
         <div className="flex items-center gap-2">
+          {/* Back Button for Mobile */}
+          <button
+            className="lg:hidden btn btn-sm btn-circle btn-ghost"
+            onClick={() => setSelectedUser(null)}
+          >
+            <ArrowLeft size={20} />
+          </button>
+
           <button onClick={() => setIsCalling(true)} className="btn btn-sm btn-circle btn-ghost">
             <Video size={20} />
           </button>

@@ -87,7 +87,7 @@ const Sidebar = () => {
   if (isUsersLoading) return <SidebarSkeleton />;
 
   return (
-    <aside className="h-full w-full lg:w-72 border-r border-base-300 flex flex-col transition-all duration-200">
+    <aside className="h-full w-full border-r border-base-300 flex flex-col transition-all duration-200">
       <div className="border-b border-base-300 w-full p-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -96,7 +96,10 @@ const Sidebar = () => {
           </div>
           <div className="flex items-center gap-1">
             <button
-              onClick={() => setShowRequests(!showRequests)}
+              onClick={() => {
+                setShowRequests(!showRequests);
+                setIsAddingUser(false);
+              }}
               className={`btn btn-ghost btn-xs btn-circle ${showRequests ? "text-primary bg-base-200" : ""}`}
               title="Friend Requests"
             >
@@ -109,7 +112,10 @@ const Sidebar = () => {
             </button>
             {!showNearbyOnly && (
               <button
-                onClick={() => setIsAddingUser(!isAddingUser)}
+                onClick={() => {
+                  setIsAddingUser(!isAddingUser);
+                  setShowRequests(false);
+                }}
                 className="btn btn-ghost btn-xs btn-circle"
                 title="Add User by Email"
               >
@@ -137,7 +143,7 @@ const Sidebar = () => {
         )}
 
         {/* Filters */}
-        <div className="mt-3 hidden lg:flex flex-col gap-2">
+        <div className="mt-3 flex flex-col gap-2">
           {!showRequests && (
             <>
               <label className="cursor-pointer flex items-center gap-2">
@@ -172,7 +178,15 @@ const Sidebar = () => {
         </div>
       </div>
 
-      <div className="overflow-y-auto w-full py-3">
+      <div
+        className="overflow-y-auto w-full py-3"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            setShowRequests(false);
+            setIsAddingUser(false);
+          }
+        }}
+      >
         {showRequests ? (
           <div className="px-4 space-y-4">
             <h3 className="text-sm font-medium text-zinc-500 mb-2">Friend Requests</h3>
@@ -246,7 +260,7 @@ const Sidebar = () => {
                 </div>
 
                 {/* User info - only visible on larger screens */}
-                <div className="hidden lg:block text-left min-w-0">
+                <div className="text-left min-w-0">
                   <div className="font-medium truncate">{user.fullName}</div>
                   <div className="text-sm text-zinc-400">
                     {onlineUsers.includes(user._id) ? "Online" : "Offline"}
