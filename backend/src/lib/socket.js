@@ -35,6 +35,38 @@ io.on("connection", (socket) => {
     delete userSocketMap[userId];
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
   });
+
+  socket.on("callUser", (data) => {
+    const receiverSocketId = getReceiverSocketId(data.userToCall);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("callUser", {
+        signal: data.signalData,
+        from: data.from,
+        name: data.name,
+      });
+    }
+  });
+
+  socket.on("answerCall", (data) => {
+    const receiverSocketId = getReceiverSocketId(data.to);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("callAccepted", data.signal);
+    }
+  });
+
+  socket.on("ice-candidate", (data) => {
+    const receiverSocketId = getReceiverSocketId(data.to);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("ice-candidate", data.candidate);
+    }
+  });
+
+  socket.on("endCall", (data) => {
+    const receiverSocketId = getReceiverSocketId(data.to);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("callEnded");
+    }
+  });
 });
 
 export { io, app, server };
