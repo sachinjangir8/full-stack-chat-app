@@ -1,6 +1,7 @@
 import { Server } from "socket.io";
 import http from "http";
 import express from "express";
+import Call from "../models/call.model.js";
 
 const app = express();
 const server = http.createServer(app);
@@ -36,7 +37,7 @@ io.on("connection", (socket) => {
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
   });
 
-  socket.on("callUser", (data) => {
+  socket.on("callUser", async (data) => {
     const receiverSocketId = getReceiverSocketId(data.userToCall);
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("callUser", {
@@ -44,6 +45,19 @@ io.on("connection", (socket) => {
         from: data.from,
         name: data.name,
       });
+    } else {
+      // User is offline, log missed call
+      try {
+        const newCall = new Call({
+          callerId: data.from._id || data.from, // Handle populate or raw ID
+          receiverId: data.userToCall,
+          status: "missed",
+          type: "video"
+        });
+        await newCall.save();
+      } catch (error) {
+        console.error("Error logging missed call:", error);
+      }
     }
   });
 
