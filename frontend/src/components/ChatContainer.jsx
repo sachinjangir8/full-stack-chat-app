@@ -63,15 +63,14 @@ const ChatContainer = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-auto">
+    <div className="h-full flex flex-col overflow-hidden">
       <ChatHeader />
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0 scrollbar-hide">
         {messages.map((message) => (
           <div
             key={message._id}
             className={`chat ${message.senderId === authUser._id ? "chat-end" : "chat-start"} group`}
-            ref={messageEndRef}
           >
             <div className=" chat-image avatar">
               <div className="size-10 rounded-full border">
@@ -128,7 +127,6 @@ const ChatContainer = () => {
               )}
             </div>
 
-            {/* Actions for own messages */}
             {message.senderId === authUser._id && !editingMessageId && (
               <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2 mt-1">
                 <button
@@ -149,6 +147,7 @@ const ChatContainer = () => {
             )}
           </div>
         ))}
+        <div ref={messageEndRef} />
       </div>
 
       <MessageInput />

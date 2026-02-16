@@ -11,10 +11,17 @@ const ChatHeader = () => {
   const [isCalling, setIsCalling] = useState(false);
 
   return (
-    <div className="p-2.5 border-b border-base-300">
+    <div className="p-2.5 border-b border-base-300 w-full bg-base-100 z-10 sticky top-0">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          {/* Avatar */}
+          {/* Back Button for Mobile */}
+          <button
+            className="lg:hidden btn btn-sm btn-circle btn-ghost"
+            onClick={() => setSelectedUser(null)}
+          >
+            <ArrowLeft size={20} />
+          </button>
+
           <div className="avatar">
             <div className="size-10 rounded-full relative">
               <img src={selectedUser.profilePic || "/avatar.png"} alt={selectedUser.fullName} />
@@ -32,14 +39,6 @@ const ChatHeader = () => {
 
         {/* Close button */}
         <div className="flex items-center gap-2">
-          {/* Back Button for Mobile */}
-          <button
-            className="lg:hidden btn btn-sm btn-circle btn-ghost"
-            onClick={() => setSelectedUser(null)}
-          >
-            <ArrowLeft size={20} />
-          </button>
-
           <button onClick={() => setIsCalling(true)} className="btn btn-sm btn-circle btn-ghost">
             <Video size={20} />
           </button>

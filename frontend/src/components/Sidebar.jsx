@@ -3,9 +3,10 @@ import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
 import { useLocationStore } from "../store/useLocationStore";
 import SidebarSkeleton from "./skeletons/SidebarSkeleton";
-import { Users, MapPin, UserPlus, Search, Bell } from "lucide-react";
+import { Users, MapPin, UserPlus, Search, Bell, Clock } from "lucide-react";
 import toast from "react-hot-toast";
 import ProfileModal from "./ProfileModal";
+import CallHistory from "./CallHistory";
 import { axiosInstance } from "../lib/axios";
 
 const Sidebar = () => {
@@ -16,6 +17,7 @@ const Sidebar = () => {
   const [showOnlineOnly, setShowOnlineOnly] = useState(false);
   const [showNearbyOnly, setShowNearbyOnly] = useState(false);
   const [showRequests, setShowRequests] = useState(false);
+  const [showCallHistory, setShowCallHistory] = useState(false);
   const [isAddingUser, setIsAddingUser] = useState(false);
   const [emailInput, setEmailInput] = useState("");
 
@@ -99,6 +101,7 @@ const Sidebar = () => {
               onClick={() => {
                 setShowRequests(!showRequests);
                 setIsAddingUser(false);
+                setShowCallHistory(false);
               }}
               className={`btn btn-ghost btn-xs btn-circle ${showRequests ? "text-primary bg-base-200" : ""}`}
               title="Friend Requests"
@@ -109,6 +112,17 @@ const Sidebar = () => {
                   <span className="indicator-item badge badge-xs badge-primary"></span>
                 )}
               </div>
+            </button>
+            <button
+              onClick={() => {
+                setShowCallHistory(!showCallHistory);
+                setShowRequests(false);
+                setIsAddingUser(false);
+              }}
+              className={`btn btn-ghost btn-xs btn-circle ${showCallHistory ? "text-primary bg-base-200" : ""}`}
+              title="Call History"
+            >
+              <Clock size={20} />
             </button>
             {!showNearbyOnly && (
               <button
@@ -218,6 +232,10 @@ const Sidebar = () => {
                 </div>
               </div>
             ))}
+          </div>
+        ) : showCallHistory ? (
+          <div className="h-full">
+            <CallHistory />
           </div>
         ) : (
           <>
