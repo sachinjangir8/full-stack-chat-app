@@ -146,6 +146,7 @@ const Sidebar = () => {
                 onClick={() => {
                   setIsAddingUser(!isAddingUser);
                   setShowRequests(false);
+                  setShowCallHistory(false);
                 }}
                 className="btn btn-ghost btn-xs btn-circle"
                 title="Add User by Email"
@@ -156,8 +157,25 @@ const Sidebar = () => {
           </div>
         </div>
 
+        {/* Add User Input */}
+        {isAddingUser && activeTab === "contacts" && (
+          <form onSubmit={handleAddUser} className="mt-4 flex gap-2">
+            <input
+              type="email"
+              placeholder="Enter email..."
+              className="input input-sm input-bordered w-full"
+              value={emailInput}
+              onChange={(e) => setEmailInput(e.target.value)}
+              autoFocus
+            />
+            <button type="submit" className="btn btn-sm btn-primary btn-square">
+              <Search size={16} />
+            </button>
+          </form>
+        )}
+
         {/* Global Filters (Only for Contacts) - Moved Nearby to Discovery */}
-        {activeTab === "contacts" && !showRequests && (
+        {activeTab === "contacts" && !showRequests && !showCallHistory && !isAddingUser && (
           <div className="mt-3 flex flex-col gap-2">
             <label className="cursor-pointer flex items-center gap-2">
               <input
@@ -173,7 +191,7 @@ const Sidebar = () => {
         )}
 
         {/* Discovery Tab Search */}
-        {activeTab === "discovery" && (
+        {activeTab === "discovery" && !showRequests && !showCallHistory && (
           <form onSubmit={handleInterestSearch} className="mt-4 flex gap-2">
             <input
               type="text"
@@ -192,23 +210,36 @@ const Sidebar = () => {
       {/* Tabs */}
       <div className="flex border-b border-base-300">
         <button
-          onClick={() => setActiveTab("contacts")}
-          className={`flex-1 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === "contacts" ? "border-primary text-primary" : "border-transparent text-zinc-500 hover:text-zinc-300"}`}
+          onClick={() => {
+            setActiveTab("contacts");
+            setShowRequests(false);
+            setShowCallHistory(false);
+            setIsAddingUser(false);
+          }}
+          className={`flex-1 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === "contacts" && !showRequests && !showCallHistory ? "border-primary text-primary" : "border-transparent text-zinc-500 hover:text-zinc-300"}`}
         >
           Chats
         </button>
         <button
-          onClick={() => setActiveTab("groups")}
-          className={`flex-1 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === "groups" ? "border-primary text-primary" : "border-transparent text-zinc-500 hover:text-zinc-300"}`}
+          onClick={() => {
+            setActiveTab("groups");
+            setShowRequests(false);
+            setShowCallHistory(false);
+            setIsAddingUser(false);
+          }}
+          className={`flex-1 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === "groups" && !showRequests && !showCallHistory ? "border-primary text-primary" : "border-transparent text-zinc-500 hover:text-zinc-300"}`}
         >
           Groups
         </button>
         <button
           onClick={() => {
             setActiveTab("discovery");
+            setShowRequests(false);
+            setShowCallHistory(false);
+            setIsAddingUser(false);
             getNearbyUsers();
           }}
-          className={`flex-1 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === "discovery" ? "border-primary text-primary" : "border-transparent text-zinc-500 hover:text-zinc-300"}`}
+          className={`flex-1 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === "discovery" && !showRequests && !showCallHistory ? "border-primary text-primary" : "border-transparent text-zinc-500 hover:text-zinc-300"}`}
         >
           Discovery
         </button>
