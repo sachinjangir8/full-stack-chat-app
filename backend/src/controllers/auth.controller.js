@@ -4,6 +4,8 @@ import bcrypt from "bcryptjs";
 import cloudinary from "../lib/cloudinary.js";
 import twilio from "twilio";
 
+import { sendEmailOtp } from "../lib/mail.js";
+
 export const signup = async (req, res) => {
   const { fullName, email, password, mobile } = req.body;
   try {
@@ -16,38 +18,115 @@ export const signup = async (req, res) => {
     }
 
     const user = await User.findOne({ email });
-    if (user) return res.status(400).json({ message: "Email already exists" });
+    if (user && user.isVerified) return res.status(400).json({ message: "Email already exists" });
 
     const existingMobile = await User.findOne({ mobile });
-    if (existingMobile) return res.status(400).json({ message: "Mobile number already exists" });
+    if (existingMobile && existingMobile.isVerified) return res.status(400).json({ message: "Mobile number already exists" });
 
+    // Generate OTPs
+    const emailOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    const mobileOtp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Hash OTPs and Password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
+    const emailOtpHash = await bcrypt.hash(emailOtp, salt);
+    const mobileOtpHash = await bcrypt.hash(mobileOtp, salt);
 
-    const newUser = new User({
-      fullName,
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+
+    // Create or Update User
+    let newUser;
+    if (user && !user.isVerified) {
+      newUser = user;
+      newUser.fullName = fullName;
+      newUser.password = hashedPassword;
+      newUser.mobile = mobile;
+      newUser.emailOtp = emailOtpHash;
+      newUser.mobileOtp = mobileOtpHash;
+      newUser.otpExpiry = otpExpiry;
+    } else {
+      newUser = new User({
+        fullName,
+        email,
+        password: hashedPassword,
+        mobile,
+        emailOtp: emailOtpHash,
+        mobileOtp: mobileOtpHash,
+        otpExpiry,
+        isVerified: false,
+      });
+    }
+
+    await newUser.save();
+
+    // Send OTPs
+    // 1. Email
+    await sendEmailOtp(email, emailOtp);
+
+    // 2. Mobile (Twilio)
+    try {
+      const client = new twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+      await client.messages.create({
+        body: `Your Chat App Verification Code is: ${mobileOtp}`,
+        from: process.env.TWILIO_PHONE_NUMBER,
+        to: mobile,
+      });
+    } catch (twilioError) {
+      console.error("Twilio Error:", twilioError);
+      // Continue even if SMS fails, user can resend
+    }
+
+    res.status(200).json({
+      message: "Verification OTPs sent to email and mobile",
+      userId: newUser._id,
       email,
-      password: hashedPassword,
-      mobile,
+      mobile
     });
 
-    if (newUser) {
-      // generate jwt token here
-      generateToken(newUser._id, res);
-      await newUser.save();
-
-      res.status(201).json({
-        _id: newUser._id,
-        fullName: newUser.fullName,
-        email: newUser.email,
-        mobile: newUser.mobile,
-        profilePic: newUser.profilePic,
-      });
-    } else {
-      res.status(400).json({ message: "Invalid user data" });
-    }
   } catch (error) {
     console.log("Error in signup controller", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+export const verifySignup = async (req, res) => {
+  const { userId, emailOtp, mobileOtp } = req.body;
+  try {
+    const user = await User.findById(userId);
+    if (!user) return res.status(400).json({ message: "User not found" });
+
+    if (user.isVerified) return res.status(400).json({ message: "User already verified" });
+
+    if (user.otpExpiry < Date.now()) {
+      return res.status(400).json({ message: "OTPs expired. Please resend." });
+    }
+
+    const isEmailMatch = await bcrypt.compare(emailOtp, user.emailOtp);
+    const isMobileMatch = await bcrypt.compare(mobileOtp, user.mobileOtp);
+
+    if (!isEmailMatch || !isMobileMatch) {
+      return res.status(400).json({ message: "Invalid Email or Mobile OTP" });
+    }
+
+    user.isVerified = true;
+    user.emailOtp = undefined;
+    user.mobileOtp = undefined;
+    user.otpExpiry = undefined;
+    await user.save();
+
+    generateToken(user._id, res);
+
+    res.status(200).json({
+      _id: user._id,
+      fullName: user.fullName,
+      email: user.email,
+      mobile: user.mobile,
+      profilePic: user.profilePic,
+    });
+
+  } catch (error) {
+    console.log("Error in verifySignup controller", error.message);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
@@ -193,6 +272,7 @@ export const updateProfile = async (req, res) => {
     if (bio !== undefined) updateData.bio = bio;
     if (age !== undefined) updateData.age = age;
     if (gender !== undefined) updateData.gender = gender;
+    if (req.body.publicKey !== undefined) updateData.publicKey = req.body.publicKey;
 
     const updatedUser = await User.findByIdAndUpdate(
       userId,

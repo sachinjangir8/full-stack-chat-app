@@ -15,7 +15,14 @@ const SignUpPage = () => {
     mobile: "",
   });
 
-  const { signup, isSigningUp } = useAuthStore();
+  const { signup, isSigningUp, verifySignup } = useAuthStore();
+
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationData, setVerificationData] = useState({
+    userId: null,
+    emailOtp: "",
+    mobileOtp: "",
+  });
 
   const validateForm = () => {
     if (!formData.fullName.trim()) return toast.error("Full name is required");
@@ -29,13 +36,83 @@ const SignUpPage = () => {
     return true;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-
     const success = validateForm();
-
-    if (success === true) signup(formData);
+    if (success === true) {
+      const data = await signup(formData);
+      if (data) {
+        setVerificationData({ ...verificationData, userId: data.userId });
+        setIsVerifying(true);
+      }
+    }
   };
+
+  const handleVerificationSubmit = async (e) => {
+    e.preventDefault();
+    if (!verificationData.emailOtp || !verificationData.mobileOtp) {
+      return toast.error("Please enter both OTPs");
+    }
+    await verifySignup(verificationData);
+  };
+
+  if (isVerifying) {
+    return (
+      <div className="min-h-screen flex justify-center items-center p-4">
+        <div className="bg-base-100 p-8 rounded-lg shadow-lg w-full max-w-md">
+          <h2 className="text-2xl font-bold mb-6 text-center">Verify Your Account</h2>
+          <p className="text-center mb-6">Enter the OTPs sent to your email and mobile.</p>
+
+          <form onSubmit={handleVerificationSubmit} className="space-y-4">
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Email OTP</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Enter Email OTP"
+                className="input input-bordered w-full"
+                value={verificationData.emailOtp}
+                onChange={(e) => setVerificationData({ ...verificationData, emailOtp: e.target.value })}
+              />
+            </div>
+
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Mobile OTP</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Enter Mobile OTP"
+                className="input input-bordered w-full"
+                value={verificationData.mobileOtp}
+                onChange={(e) => setVerificationData({ ...verificationData, mobileOtp: e.target.value })}
+              />
+            </div>
+
+            <button type="submit" className="btn btn-primary w-full" disabled={isSigningUp}>
+              {isSigningUp ? (
+                <>
+                  <Loader2 className="size-5 animate-spin" />
+                  Verifying...
+                </>
+              ) : (
+                "Verify & Login"
+              )}
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-ghost w-full mt-2"
+              onClick={() => setIsVerifying(false)}
+            >
+              Back to Signup
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2">

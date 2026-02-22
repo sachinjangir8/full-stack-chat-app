@@ -85,11 +85,18 @@ export const sendMessage = async (req, res) => {
     const { id: receiverId } = req.params;
     const senderId = req.user._id;
 
-    let imageUrl;
+    let imageUrl, audioUrl;
     if (image) {
       // Upload base64 image to cloudinary
       const uploadResponse = await cloudinary.uploader.upload(image);
       imageUrl = uploadResponse.secure_url;
+    }
+    if (audio) {
+      const uploadResponse = await cloudinary.uploader.upload(audio, {
+        resource_type: "video",
+        folder: "audio_messages",
+      });
+      audioUrl = uploadResponse.secure_url;
     }
 
     const newMessage = new Message({
@@ -97,6 +104,7 @@ export const sendMessage = async (req, res) => {
       receiverId,
       text,
       image: imageUrl,
+      audio: audioUrl,
     });
 
     await newMessage.save();
@@ -170,6 +178,72 @@ export const editMessage = async (req, res) => {
     res.status(200).json(updatedMessage);
   } catch (error) {
     console.log("Error in editMessage controller: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+export const markMessagesAsSeen = async (req, res) => {
+  try {
+    const { id: userToChatId } = req.params;
+    const myId = req.user._id;
+
+    await Message.updateMany(
+      { senderId: userToChatId, receiverId: myId, isSeen: false },
+      { $set: { isSeen: true } }
+    );
+
+    const senderSocketId = getReceiverSocketId(userToChatId);
+    if (senderSocketId) {
+      io.to(senderSocketId).emit("messagesSeen", { seenBy: myId, senderId: userToChatId });
+    }
+
+    res.status(200).json({ message: "Messages marked as seen" });
+  } catch (error) {
+    console.log("Error in markMessagesAsSeen controller: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const toggleStarMessage = async (req, res) => {
+  try {
+    const { id: messageId } = req.params;
+    const myId = req.user._id;
+
+    const message = await Message.findById(messageId);
+    if (!message) return res.status(404).json({ message: "Message not found" });
+
+    // Only sender or receiver can star
+    if (message.senderId.toString() !== myId.toString() && message.receiverId.toString() !== myId.toString()) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+
+    message.isStarred = !message.isStarred;
+    await message.save();
+
+    res.status(200).json(message);
+  } catch (error) {
+    console.log("Error in toggleStarMessage controller: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const togglePinMessage = async (req, res) => {
+  try {
+    const { id: messageId } = req.params;
+    const myId = req.user._id;
+
+    const message = await Message.findById(messageId);
+    if (!message) return res.status(404).json({ message: "Message not found" });
+
+    if (message.senderId.toString() !== myId.toString() && message.receiverId.toString() !== myId.toString()) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+
+    message.isPinned = !message.isPinned;
+    await message.save();
+
+    res.status(200).json(message);
+  } catch (error) {
+    console.log("Error in togglePinMessage controller: ", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
 };

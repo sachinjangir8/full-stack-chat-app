@@ -31,6 +31,38 @@ io.on("connection", (socket) => {
   // io.emit() is used to send events to all the connected clients
   io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
+  socket.on("joinGroup", (groupId) => {
+    socket.join(`group_${groupId}`);
+    console.log(`User ${userId} joined group ${groupId}`);
+  });
+
+  socket.on("leaveGroup", (groupId) => {
+    socket.leave(`group_${groupId}`);
+    console.log(`User ${userId} left group ${groupId}`);
+  });
+
+  socket.on("typing", ({ receiverId, isGroup }) => {
+    if (isGroup) {
+      socket.to(`group_${receiverId}`).emit("typing", { userId, groupId: receiverId });
+    } else {
+      const receiverSocketId = getReceiverSocketId(receiverId);
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit("typing", userId);
+      }
+    }
+  });
+
+  socket.on("stop-typing", ({ receiverId, isGroup }) => {
+    if (isGroup) {
+      socket.to(`group_${receiverId}`).emit("stop-typing", { userId, groupId: receiverId });
+    } else {
+      const receiverSocketId = getReceiverSocketId(receiverId);
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit("stop-typing", userId);
+      }
+    }
+  });
+
   socket.on("disconnect", () => {
     console.log("A user disconnected", socket.id);
     delete userSocketMap[userId];

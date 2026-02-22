@@ -1,6 +1,6 @@
 import { useChatStore } from "../store/useChatStore";
 import { useEffect, useRef, useState } from "react";
-import { X, Pencil, Trash, Check } from "lucide-react";
+import { X, Pencil, Trash, Check, Star, Pin, Lock } from "lucide-react";
 
 import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
@@ -14,30 +14,59 @@ const ChatContainer = () => {
     getMessages,
     isMessagesLoading,
     selectedUser,
+    selectedGroup,
     subscribeToMessages,
     unsubscribeFromMessages,
     deleteMessage,
     editMessage,
+    typingUsers,
+    subscribeToTyping,
+    unsubscribeFromTyping,
+    markMessagesAsSeen,
+    toggleStar,
+    togglePin,
   } = useChatStore();
   const { authUser } = useAuthStore();
   const messageEndRef = useRef(null);
+
+  useEffect(() => {
+    if (selectedUser) {
+      markMessagesAsSeen(selectedUser._id);
+    }
+  }, [messages, selectedUser, markMessagesAsSeen]);
 
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [editedText, setEditedText] = useState("");
 
   useEffect(() => {
-    getMessages(selectedUser._id);
+    if (selectedGroup) {
+      getMessages(selectedGroup._id, true);
+    } else if (selectedUser) {
+      getMessages(selectedUser._id, false);
+    }
 
     subscribeToMessages();
+    subscribeToTyping();
 
-    return () => unsubscribeFromMessages();
-  }, [selectedUser._id, getMessages, subscribeToMessages, unsubscribeFromMessages]);
+    return () => {
+      unsubscribeFromMessages();
+      unsubscribeFromTyping();
+    };
+  }, [
+    selectedUser?._id,
+    selectedGroup?._id,
+    getMessages,
+    subscribeToMessages,
+    unsubscribeFromMessages,
+    subscribeToTyping,
+    unsubscribeFromTyping,
+  ]);
 
   useEffect(() => {
     if (messageEndRef.current && messages) {
       messageEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages]);
+  }, [messages, typingUsers]);
 
   const handleEditClick = (message) => {
     setEditingMessageId(message._id);
@@ -76,16 +105,21 @@ const ChatContainer = () => {
               <div className="size-10 rounded-full border">
                 <img
                   src={
-                    message.senderId === authUser._id
+                    message.senderId?._id === authUser._id || message.senderId === authUser._id
                       ? authUser.profilePic || "/avatar.png"
-                      : selectedUser.profilePic || "/avatar.png"
+                      : (message.senderId?.profilePic || selectedUser?.profilePic || "/avatar.png")
                   }
                   alt="profile pic"
                 />
               </div>
             </div>
-            <div className="chat-header mb-1">
-              <time className="text-xs opacity-50 ml-1">
+            <div className="chat-header mb-1 flex flex-col items-start">
+              {selectedGroup && message.senderId?._id !== authUser._id && (
+                <span className="text-[10px] font-bold text-primary mb-0.5">
+                  {message.senderId?.fullName || "Member"}
+                </span>
+              )}
+              <time className="text-[10px] opacity-50">
                 {formatMessageTime(message.createdAt)}
               </time>
             </div>
@@ -117,7 +151,28 @@ const ChatContainer = () => {
                 </div>
               ) : (
                 <div className="relative">
-                  {message.text && <p>{message.text}</p>}
+                  {(message.isStarred || message.isPinned) && (
+                    <div className="flex gap-1 mb-1">
+                      {message.isPinned && <Pin size={10} className="text-primary fill-primary" />}
+                      {message.isStarred && <Star size={10} className="text-yellow-500 fill-yellow-500" />}
+                    </div>
+                  )}
+                  {message.isE2EE && (
+                    <div className="flex items-center gap-1 opacity-50 mb-1">
+                      <Lock size={10} />
+                      <span className="text-[8px] uppercase tracking-wider font-bold">Encrypted</span>
+                    </div>
+                  )}
+                  {message.text && <p className="mb-2">{message.text}</p>}
+                  {message.audio && (
+                    <div className="mt-2 min-w-[200px]">
+                      <audio
+                        src={message.audio}
+                        controls
+                        className="w-full h-8 opacity-90 brightness-90 filter invert"
+                      />
+                    </div>
+                  )}
                   {message.isEdited && (
                     <span className="text-[10px] opacity-70 block text-right mt-1">
                       (edited)
@@ -127,31 +182,68 @@ const ChatContainer = () => {
               )}
             </div>
 
-            {message.senderId === authUser._id && !editingMessageId && (
-              <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2 mt-1">
+            <div className={`chat-footer opacity-50 text-[10px] flex items-center gap-1 mt-1 ${message.senderId === authUser._id ? "justify-end" : ""}`}>
+              {!selectedGroup && message.senderId === authUser._id && (
+                <span className={message.isSeen ? "text-blue-500" : ""}>
+                  {message.isSeen ? "Seen" : "Sent"}
+                </span>
+              )}
+            </div>
+            {!editingMessageId && (
+              <div className={`flex gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity ${message.senderId === authUser._id ? "justify-end" : "justify-start"}`}>
                 <button
-                  onClick={() => handleEditClick(message)}
-                  className="btn btn-ghost btn-xs text-info"
-                  title="Edit"
+                  onClick={() => toggleStar(message._id)}
+                  className={`btn btn-ghost btn-xs ${message.isStarred ? "text-yellow-500" : "text-zinc-500"}`}
+                  title={message.isStarred ? "Unstar" : "Star"}
                 >
-                  <Pencil size={14} />
+                  <Star size={14} className={message.isStarred ? "fill-current" : ""} />
                 </button>
                 <button
-                  onClick={() => deleteMessage(message._id)}
-                  className="btn btn-ghost btn-xs text-error"
-                  title="Delete"
+                  onClick={() => togglePin(message._id)}
+                  className={`btn btn-ghost btn-xs ${message.isPinned ? "text-primary" : "text-zinc-500"}`}
+                  title={message.isPinned ? "Unpin" : "Pin"}
                 >
-                  <Trash size={14} />
+                  <Pin size={14} className={message.isPinned ? "fill-current" : ""} />
                 </button>
+                {message.senderId === authUser._id && (
+                  <>
+                    <button
+                      onClick={() => handleEditClick(message)}
+                      className="btn btn-ghost btn-xs text-info"
+                      title="Edit"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <button
+                      onClick={() => deleteMessage(message._id)}
+                      className="btn btn-ghost btn-xs text-error"
+                      title="Delete"
+                    >
+                      <Trash size={14} />
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>
         ))}
+        {((selectedUser && typingUsers[selectedUser._id]) || (selectedGroup && typingUsers[selectedGroup._id])) && (
+          <div className="chat chat-start">
+            <div className="chat-image avatar">
+              <div className="size-10 rounded-full border">
+                <img src={(selectedUser?.profilePic || selectedGroup?.avatar) || "/avatar.png"} alt="profile pic" />
+              </div>
+            </div>
+            <div className="chat-bubble bg-base-200">
+              <span className="loading loading-dots loading-xs"></span>
+            </div>
+          </div>
+        )}
         <div ref={messageEndRef} />
       </div>
 
       <MessageInput />
-    </div>
+    </div >
   );
 };
 export default ChatContainer;

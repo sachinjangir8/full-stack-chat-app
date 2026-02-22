@@ -1,10 +1,11 @@
 import express from "express";
-import { checkAuth, login, logout, signup, updateProfile, sendOtp, verifyOtp } from "../controllers/auth.controller.js";
+import { checkAuth, login, logout, signup, updateProfile, sendOtp, verifyOtp, verifySignup } from "../controllers/auth.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
 router.post("/signup", signup);
+router.post("/verify-signup", verifySignup);
 router.post("/login", login);
 router.post("/logout", logout);
 

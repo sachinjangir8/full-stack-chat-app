@@ -21,11 +21,18 @@ const userSchema = new mongoose.Schema(
       unique: true,
       sparse: true, // Allows null/undefined values to duplicate (for email-only users)
     },
-    otp: {
+    mobileOtp: {
+      type: String,
+    },
+    emailOtp: {
       type: String,
     },
     otpExpiry: {
       type: Date,
+    },
+    isVerified: {
+      type: Boolean,
+      default: false,
     },
     profilePic: {
       type: String,
@@ -79,6 +86,10 @@ const userSchema = new mongoose.Schema(
         ref: "User",
       },
     ],
+    publicKey: {
+      type: String,
+      default: "",
+    },
   },
   { timestamps: true }
 );

@@ -2,8 +2,11 @@ import { create } from "zustand";
 import { axiosInstance } from "../lib/axios.js";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
+import { generateKeyPair } from "../lib/encryption.js";
 
-const BASE_URL = "https://full-stack-chat-app-2-backend.onrender.com";
+const BASE_URL = import.meta.env.MODE === "development"
+  ? "http://localhost:5001"
+  : "https://full-stack-chat-app-2-backend.onrender.com";
 
 export const useAuthStore = create((set, get) => ({
   authUser: null,
@@ -14,12 +17,31 @@ export const useAuthStore = create((set, get) => ({
   onlineUsers: [],
   socket: null,
 
+  initializeE2EE: async () => {
+    const { authUser } = get();
+    if (!authUser) return;
+
+    const privateKey = localStorage.getItem(`chat_priv_${authUser._id}`);
+    if (!privateKey || !authUser.publicKey) {
+      console.log("Generating new E2EE key pair...");
+      try {
+        const { publicKey, privateKey: newPrivateKey } = await generateKeyPair();
+        await axiosInstance.put("/auth/update-profile", { publicKey });
+        localStorage.setItem(`chat_priv_${authUser._id}`, newPrivateKey);
+        // Update local authUser state
+        set({ authUser: { ...authUser, publicKey } });
+      } catch (error) {
+        console.error("Failed to initialize E2EE:", error);
+      }
+    }
+  },
+
   checkAuth: async () => {
     try {
       const res = await axiosInstance.get("/auth/check");
-
       set({ authUser: res.data });
       get().connectSocket();
+      await get().initializeE2EE();
     } catch (error) {
       console.log("Error in checkAuth:", error);
       set({ authUser: null });
@@ -32,11 +54,28 @@ export const useAuthStore = create((set, get) => ({
     set({ isSigningUp: true });
     try {
       const res = await axiosInstance.post("/auth/signup", data);
-      set({ authUser: res.data });
-      toast.success("Account created successfully");
-      get().connectSocket();
+      toast.success(res.data.message);
+      return res.data;
     } catch (error) {
       toast.error(error.response.data.message);
+      return null;
+    } finally {
+      set({ isSigningUp: false });
+    }
+  },
+
+  verifySignup: async (data) => {
+    set({ isSigningUp: true });
+    try {
+      const res = await axiosInstance.post("/auth/verify-signup", data);
+      set({ authUser: res.data });
+      toast.success("Account verified and created successfully");
+      get().connectSocket();
+      await get().initializeE2EE();
+      return true;
+    } catch (error) {
+      toast.error(error.response.data.message);
+      return false;
     } finally {
       set({ isSigningUp: false });
     }
@@ -48,8 +87,8 @@ export const useAuthStore = create((set, get) => ({
       const res = await axiosInstance.post("/auth/login", data);
       set({ authUser: res.data });
       toast.success("Logged in successfully");
-
       get().connectSocket();
+      await get().initializeE2EE();
     } catch (error) {
       toast.error(error.response.data.message);
     } finally {
@@ -100,6 +139,7 @@ export const useAuthStore = create((set, get) => ({
       set({ authUser: res.data });
       toast.success("Logged in successfully");
       get().connectSocket();
+      await get().initializeE2EE();
       return true;
     } catch (error) {
       toast.error(error.response.data.message);
