@@ -30,10 +30,14 @@ const ChatContainer = () => {
   const messageEndRef = useRef(null);
 
   useEffect(() => {
-    if (selectedUser) {
+    if (!selectedUser) return;
+
+    // Only mark as seen if there are UNSEEN messages from the other user
+    const hasUnseen = messages.some(m => (m.senderId === selectedUser._id || m.senderId?._id === selectedUser._id) && !m.isSeen);
+    if (hasUnseen) {
       markMessagesAsSeen(selectedUser._id);
     }
-  }, [messages, selectedUser, markMessagesAsSeen]);
+  }, [messages, selectedUser?._id, markMessagesAsSeen]);
 
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [editedText, setEditedText] = useState("");
@@ -64,9 +68,16 @@ const ChatContainer = () => {
 
   useEffect(() => {
     if (messageEndRef.current && messages) {
-      messageEndRef.current.scrollIntoView({ behavior: "smooth" });
+      const chatContainer = messageEndRef.current.parentElement;
+      const isAtBottom = chatContainer.scrollHeight - chatContainer.scrollTop <= chatContainer.clientHeight + 100;
+      const lastMessageIsMine = messages[messages.length - 1]?.senderId === authUser._id;
+
+      // Only scroll if user is at bottom OR the user just sent a message
+      if (isAtBottom || lastMessageIsMine) {
+        messageEndRef.current.scrollIntoView({ behavior: "smooth" });
+      }
     }
-  }, [messages, typingUsers]);
+  }, [messages, typingUsers, authUser._id]);
 
   const handleEditClick = (message) => {
     setEditingMessageId(message._id);

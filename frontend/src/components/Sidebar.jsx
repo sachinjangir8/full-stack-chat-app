@@ -16,7 +16,7 @@ const Sidebar = () => {
     getUsers, users, selectedUser, setSelectedUser, isUsersLoading, addContact,
     getGroups, groups, selectedGroup, setSelectedGroup, isGroupsLoading
   } = useChatStore();
-  const { onlineUsers } = useAuthStore();
+  const { authUser, onlineUsers, updateProfile } = useAuthStore();
   const { nearbyUsers, getNearbyUsers, getCurrentLocation, isLoadingNearby, isFindingLocation } = useLocationStore();
 
   const [showOnlineOnly, setShowOnlineOnly] = useState(false);
@@ -48,7 +48,7 @@ const Sidebar = () => {
 
   useEffect(() => {
     fetchRequests();
-    getCurrentLocation(); // Pre-fetch location for discovery
+    // Removed automatic location fetch to respect privacy
   }, []);
 
   const fetchRequests = async () => {
@@ -140,6 +140,19 @@ const Sidebar = () => {
               title="Call History"
             >
               <Clock size={20} />
+            </button>
+            <button
+              onClick={() => {
+                const newGhostMode = !authUser?.isGhostMode;
+                updateProfile({ isGhostMode: newGhostMode });
+                if (!newGhostMode) {
+                  getCurrentLocation();
+                }
+              }}
+              className={`btn btn-ghost btn-xs btn-circle ${!authUser?.isGhostMode ? "text-primary bg-base-200" : "text-zinc-500"}`}
+              title={authUser?.isGhostMode ? "Enable Nearby Visibility" : "Disable Nearby Visibility"}
+            >
+              <MapPin size={20} className={authUser?.isGhostMode ? "opacity-50" : ""} />
             </button>
             {activeTab === "contacts" && (
               <button
@@ -311,30 +324,54 @@ const Sidebar = () => {
           <>
             <div className="px-4 mb-2">
               <h3 className="text-xs font-bold text-zinc-500 flex items-center gap-2">
-                <MapPin size={12} /> NEARBY (500m)
+                <MapPin size={12} /> NEARBY (1km)
               </h3>
             </div>
-            {isFindingLocation && <div className="text-center text-zinc-500 py-2 text-xs">Finding location...</div>}
-            {isLoadingNearby && <div className="text-center text-zinc-500 py-2 text-xs">Looking for users...</div>}
-            {nearbyUsers.map((user) => (
-              <button
-                key={user._id}
-                onClick={() => setSelectedProfileUser(user)}
-                className="w-full p-3 flex items-center gap-3 hover:bg-base-300 transition-colors"
-              >
-                <div className="relative">
-                  <img src={user.profilePic || "/avatar.png"} alt={user.fullName} className="size-12 object-cover rounded-full" />
+
+            {authUser?.isGhostMode ? (
+              <div className="px-4 py-8 text-center bg-base-200/50 mx-4 rounded-xl border border-dashed border-base-300">
+                <div className="size-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <MapPin size={24} className="text-primary opacity-50" />
                 </div>
-                <div className="text-left min-w-0">
-                  <div className="font-medium truncate">{user.fullName}</div>
-                  <div className="text-xs text-primary font-medium">
-                    {user.distance < 1000 ? `${Math.round(user.distance)}m away` : `${(user.distance / 1000).toFixed(1)}km away`}
-                  </div>
-                </div>
-              </button>
-            ))}
-            {nearbyUsers.length === 0 && !isLoadingNearby && !isFindingLocation && (
-              <div className="text-center text-zinc-500 py-2 text-xs">No users nearby</div>
+                <h3 className="font-medium text-sm mb-1">Nearby Discovery is Off</h3>
+                <p className="text-xs text-zinc-500 mb-4">
+                  Enable visibility to find and be found by other users within 1km.
+                </p>
+                <button
+                  onClick={() => {
+                    updateProfile({ isGhostMode: false });
+                    getCurrentLocation();
+                  }}
+                  className="btn btn-sm btn-primary w-full"
+                >
+                  Enable Nearby
+                </button>
+              </div>
+            ) : (
+              <>
+                {isFindingLocation && <div className="text-center text-zinc-500 py-2 text-xs">Finding location...</div>}
+                {isLoadingNearby && <div className="text-center text-zinc-500 py-2 text-xs">Looking for users...</div>}
+                {nearbyUsers.map((user) => (
+                  <button
+                    key={user._id}
+                    onClick={() => setSelectedProfileUser(user)}
+                    className="w-full p-3 flex items-center gap-3 hover:bg-base-300 transition-colors"
+                  >
+                    <div className="relative">
+                      <img src={user.profilePic || "/avatar.png"} alt={user.fullName} className="size-12 object-cover rounded-full" />
+                    </div>
+                    <div className="text-left min-w-0">
+                      <div className="font-medium truncate">{user.fullName}</div>
+                      <div className="text-xs text-primary font-medium">
+                        {user.distance < 1000 ? `${Math.round(user.distance)}m away` : `${(user.distance / 1000).toFixed(1)}km away`}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+                {nearbyUsers.length === 0 && !isLoadingNearby && !isFindingLocation && (
+                  <div className="text-center text-zinc-500 py-2 text-xs">No users nearby</div>
+                )}
+              </>
             )}
 
             {discoveryResults.length > 0 && (

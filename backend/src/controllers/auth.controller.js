@@ -123,6 +123,11 @@ export const verifySignup = async (req, res) => {
       email: user.email,
       mobile: user.mobile,
       profilePic: user.profilePic,
+      isGhostMode: user.isGhostMode || false,
+      interests: user.interests || [],
+      bio: user.bio || "",
+      age: user.age,
+      gender: user.gender || "",
     });
 
   } catch (error) {
@@ -152,6 +157,11 @@ export const login = async (req, res) => {
       fullName: user.fullName,
       email: user.email,
       profilePic: user.profilePic,
+      isGhostMode: user.isGhostMode || false,
+      interests: user.interests || [],
+      bio: user.bio || "",
+      age: user.age,
+      gender: user.gender || "",
     });
   } catch (error) {
     console.log("Error in login controller", error.message);

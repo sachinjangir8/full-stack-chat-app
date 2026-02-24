@@ -293,7 +293,7 @@ export const useChatStore = create((set, get) => ({
       await axiosInstance.post(`/messages/seen/${userId}`);
       set({
         messages: get().messages.map((m) =>
-          m.senderId === userId ? { ...m, isSeen: true } : m
+          (m.senderId === userId || m.senderId?._id === userId) ? { ...m, isSeen: true } : m
         ),
       });
     } catch (error) {

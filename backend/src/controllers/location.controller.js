@@ -44,7 +44,7 @@ export const getNearbyUsers = async (req, res) => {
                         coordinates: currentUser.location.coordinates,
                     },
                     distanceField: "distance",
-                    maxDistance: 500, // 500 meters
+                    maxDistance: 1000, // 1000 meters (1km)
                     spherical: true,
                     key: "location",
                 },

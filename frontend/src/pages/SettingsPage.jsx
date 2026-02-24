@@ -1,5 +1,6 @@
 import { THEMES } from "../constants";
 import { useThemeStore } from "../store/useThemeStore";
+import { useAuthStore } from "../store/useAuthStore";
 import { Send } from "lucide-react";
 
 const PREVIEW_MESSAGES = [
@@ -9,6 +10,7 @@ const PREVIEW_MESSAGES = [
 
 const SettingsPage = () => {
   const { theme, setTheme } = useThemeStore();
+  const { authUser, updateProfile } = useAuthStore();
 
   return (
     <div className="h-screen container mx-auto px-4 pt-20 max-w-5xl">
@@ -57,8 +59,8 @@ const SettingsPage = () => {
           <input
             type="checkbox"
             className="toggle toggle-primary"
-            checked={false} // Todo: connect to authStore
-            onChange={() => { }} // Todo: connect to authStore
+            checked={authUser?.isGhostMode || false}
+            onChange={(e) => updateProfile({ isGhostMode: e.target.checked })}
           />
         </div>
 
