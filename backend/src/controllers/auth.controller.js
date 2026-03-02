@@ -2,9 +2,10 @@ import { generateToken } from "../lib/utils.js";
 import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import cloudinary from "../lib/cloudinary.js";
-import twilio from "twilio";
 
 import { sendEmailOtp } from "../lib/mail.js";
+
+const formatNumber = (num) => num && (num.startsWith("+") ? num : `+${num}`);
 
 export const signup = async (req, res) => {
   const { fullName, email, password, mobile } = req.body;
@@ -23,15 +24,13 @@ export const signup = async (req, res) => {
     const existingMobile = await User.findOne({ mobile });
     if (existingMobile && existingMobile.isVerified) return res.status(400).json({ message: "Mobile number already exists" });
 
-    // Generate OTPs
+    // Generate Email OTP
     const emailOtp = Math.floor(100000 + Math.random() * 900000).toString();
-    const mobileOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // Hash OTPs and Password
+    // Hash OTP and Password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
     const emailOtpHash = await bcrypt.hash(emailOtp, salt);
-    const mobileOtpHash = await bcrypt.hash(mobileOtp, salt);
 
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
 
@@ -43,7 +42,6 @@ export const signup = async (req, res) => {
       newUser.password = hashedPassword;
       newUser.mobile = mobile;
       newUser.emailOtp = emailOtpHash;
-      newUser.mobileOtp = mobileOtpHash;
       newUser.otpExpiry = otpExpiry;
     } else {
       newUser = new User({
@@ -52,7 +50,6 @@ export const signup = async (req, res) => {
         password: hashedPassword,
         mobile,
         emailOtp: emailOtpHash,
-        mobileOtp: mobileOtpHash,
         otpExpiry,
         isVerified: false,
       });
@@ -61,24 +58,24 @@ export const signup = async (req, res) => {
     await newUser.save();
 
     // Send OTPs
-    // 1. Email
-    await sendEmailOtp(email, emailOtp);
+    console.log(`Starting OTP delivery for ${email}...`);
 
-    // 2. Mobile (Twilio)
+    // 1. Email
     try {
-      const client = new twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-      await client.messages.create({
-        body: `Your Chat App Verification Code is: ${mobileOtp}`,
-        from: process.env.TWILIO_PHONE_NUMBER,
-        to: mobile,
-      });
-    } catch (twilioError) {
-      console.error("Twilio Error:", twilioError);
-      // Continue even if SMS fails, user can resend
+      console.log("Sending Email OTP...");
+      await sendEmailOtp(email, emailOtp);
+      console.log("Email OTP sent successfully.");
+    } catch (emailError) {
+      console.error("Email OTP Error:", emailError);
+      // Continue so user logic isn't broken
     }
 
+    // 2. Mobile (Verification removed per user request)
+    console.log("Mobile verification skipped as per configuration.");
+
+    console.log("Signup process complete, sending response.");
     res.status(200).json({
-      message: "Verification OTPs sent to email and mobile",
+      message: "Verification OTP sent to your email",
       userId: newUser._id,
       email,
       mobile
@@ -91,7 +88,7 @@ export const signup = async (req, res) => {
 };
 
 export const verifySignup = async (req, res) => {
-  const { userId, emailOtp, mobileOtp } = req.body;
+  const { userId, emailOtp } = req.body;
   try {
     const user = await User.findById(userId);
     if (!user) return res.status(400).json({ message: "User not found" });
@@ -103,10 +100,9 @@ export const verifySignup = async (req, res) => {
     }
 
     const isEmailMatch = await bcrypt.compare(emailOtp, user.emailOtp);
-    const isMobileMatch = await bcrypt.compare(mobileOtp, user.mobileOtp);
 
-    if (!isEmailMatch || !isMobileMatch) {
-      return res.status(400).json({ message: "Invalid Email or Mobile OTP" });
+    if (!isEmailMatch) {
+      return res.status(400).json({ message: "Invalid Email OTP" });
     }
 
     user.isVerified = true;
@@ -143,6 +139,10 @@ export const login = async (req, res) => {
 
     if (!user) {
       return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    if (!user.isVerified) {
+      return res.status(403).json({ message: "Account not verified. Please sign up again to receive a new verification code." });
     }
 
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
@@ -184,35 +184,8 @@ export const sendOtp = async (req, res) => {
   if (!mobile) return res.status(400).json({ message: "Mobile number is required" });
 
   try {
-    // Generate 6 digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-    // Hash OTP
-    const salt = await bcrypt.genSalt(10);
-    const otpHash = await bcrypt.hash(otp, salt);
-
-    // Expiry 5 mins
-    const otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
-
-    // Find user and update, or upsert
-    let user = await User.findOne({ mobile });
-
-    if (user) {
-      user.otp = otpHash;
-      user.otpExpiry = otpExpiry;
-      await user.save();
-    } else {
-      return res.status(404).json({ message: "User not found. Please sign up first." });
-    }
-
-    // Send OTP via Twilio
-    const client = new twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-
-    await client.messages.create({
-      body: `Your OTP for Chat App is: ${otp}`,
-      from: process.env.TWILIO_PHONE_NUMBER,
-      to: mobile,
-    });
+    // This function is now deprecated after switching to Firebase Auth
+    res.status(501).json({ message: "This endpoint is deprecated. Use Firebase Phone Auth on the frontend." });
 
     res.status(200).json({ message: "OTP sent successfully" });
 
@@ -223,46 +196,8 @@ export const sendOtp = async (req, res) => {
 };
 
 export const verifyOtp = async (req, res) => {
-  const { mobile, otp } = req.body;
-  try {
-    const user = await User.findOne({ mobile });
-    if (!user) {
-      return res.status(400).json({ message: "User not found" });
-    }
-
-    if (user.otpExpiry < Date.now()) {
-      return res.status(400).json({ message: "OTP expired" });
-    }
-
-    const isMatch = await bcrypt.compare(otp, user.otp);
-    if (!isMatch) {
-      return res.status(400).json({ message: "Invalid OTP" });
-    }
-
-    // Clear OTP
-    user.otp = undefined;
-    user.otpExpiry = undefined;
-    await user.save();
-
-    generateToken(user._id, res);
-
-    res.status(200).json({
-      _id: user._id,
-      fullName: user.fullName,
-      email: user.email,
-      profilePic: user.profilePic,
-      mobile: user.mobile,
-      isGhostMode: user.isGhostMode,
-      interests: user.interests,
-      bio: user.bio,
-      age: user.age,
-      gender: user.gender,
-    });
-
-  } catch (error) {
-    console.log("Error in verifyOtp controller", error.message);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
+  // This function is now deprecated
+  res.status(501).json({ message: "Mobile OTP login is no longer supported. Please use Email/Password login." });
 };
 
 export const updateProfile = async (req, res) => {

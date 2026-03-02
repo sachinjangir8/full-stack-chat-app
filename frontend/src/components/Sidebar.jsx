@@ -229,7 +229,7 @@ const Sidebar = () => {
             setShowCallHistory(false);
             setIsAddingUser(false);
           }}
-          className={`flex-1 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === "contacts" && !showRequests && !showCallHistory ? "border-primary text-primary" : "border-transparent text-zinc-500 hover:text-zinc-300"}`}
+          className={`flex-1 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === "contacts" && !showRequests && !showCallHistory && !isAddingUser ? "border-primary text-primary" : "border-transparent text-zinc-500 hover:text-zinc-300"}`}
         >
           Chats
         </button>
@@ -240,7 +240,7 @@ const Sidebar = () => {
             setShowCallHistory(false);
             setIsAddingUser(false);
           }}
-          className={`flex-1 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === "groups" && !showRequests && !showCallHistory ? "border-primary text-primary" : "border-transparent text-zinc-500 hover:text-zinc-300"}`}
+          className={`flex-1 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === "groups" && !showRequests && !showCallHistory && !isAddingUser ? "border-primary text-primary" : "border-transparent text-zinc-500 hover:text-zinc-300"}`}
         >
           Groups
         </button>
@@ -252,7 +252,7 @@ const Sidebar = () => {
             setIsAddingUser(false);
             getNearbyUsers();
           }}
-          className={`flex-1 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === "discovery" && !showRequests && !showCallHistory ? "border-primary text-primary" : "border-transparent text-zinc-500 hover:text-zinc-300"}`}
+          className={`flex-1 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === "discovery" && !showRequests && !showCallHistory && !isAddingUser ? "border-primary text-primary" : "border-transparent text-zinc-500 hover:text-zinc-300"}`}
         >
           Discovery
         </button>

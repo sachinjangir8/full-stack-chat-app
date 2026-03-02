@@ -53,6 +53,7 @@ export const getNearbyUsers = async (req, res) => {
                 $match: {
                     _id: { $ne: currentUser._id }, // Exclude current user
                     isGhostMode: { $ne: true },   // Exclude ghost mode users
+                    isVerified: true,             // Exclude unverified users
                 },
             },
             {

@@ -14,6 +14,7 @@ export const searchByInterests = async (req, res) => {
             interests: { $in: [new RegExp(query, "i")] },
             _id: { $ne: myId },
             isGhostMode: { $ne: true },
+            isVerified: true,
         }).select("-password");
 
         res.status(200).json(users);

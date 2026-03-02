@@ -21,7 +21,6 @@ const SignUpPage = () => {
   const [verificationData, setVerificationData] = useState({
     userId: null,
     emailOtp: "",
-    mobileOtp: "",
   });
 
   const validateForm = () => {
@@ -50,10 +49,9 @@ const SignUpPage = () => {
 
   const handleVerificationSubmit = async (e) => {
     e.preventDefault();
-    if (!verificationData.emailOtp || !verificationData.mobileOtp) {
-      return toast.error("Please enter both OTPs");
-    }
-    await verifySignup(verificationData);
+    if (!verificationData.emailOtp) return toast.error("Please enter Email OTP");
+
+    await verifySignup({ userId: verificationData.userId, emailOtp: verificationData.emailOtp });
   };
 
   if (isVerifying) {
@@ -61,7 +59,7 @@ const SignUpPage = () => {
       <div className="min-h-screen flex justify-center items-center p-4">
         <div className="bg-base-100 p-8 rounded-lg shadow-lg w-full max-w-md">
           <h2 className="text-2xl font-bold mb-6 text-center">Verify Your Account</h2>
-          <p className="text-center mb-6">Enter the OTPs sent to your email and mobile.</p>
+          <p className="text-center mb-6">Enter the code sent to {formData.email}.</p>
 
           <form onSubmit={handleVerificationSubmit} className="space-y-4">
             <div className="form-control">
@@ -77,28 +75,8 @@ const SignUpPage = () => {
               />
             </div>
 
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text">Mobile OTP</span>
-              </label>
-              <input
-                type="text"
-                placeholder="Enter Mobile OTP"
-                className="input input-bordered w-full"
-                value={verificationData.mobileOtp}
-                onChange={(e) => setVerificationData({ ...verificationData, mobileOtp: e.target.value })}
-              />
-            </div>
-
             <button type="submit" className="btn btn-primary w-full" disabled={isSigningUp}>
-              {isSigningUp ? (
-                <>
-                  <Loader2 className="size-5 animate-spin" />
-                  Verifying...
-                </>
-              ) : (
-                "Verify & Login"
-              )}
+              {isSigningUp ? <Loader2 className="size-5 animate-spin" /> : "Verify & Login"}
             </button>
 
             <button
@@ -106,7 +84,7 @@ const SignUpPage = () => {
               className="btn btn-ghost w-full mt-2"
               onClick={() => setIsVerifying(false)}
             >
-              Back to Signup
+              Back
             </button>
           </form>
         </div>

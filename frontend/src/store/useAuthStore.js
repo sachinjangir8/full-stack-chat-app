@@ -16,6 +16,7 @@ export const useAuthStore = create((set, get) => ({
   isCheckingAuth: true,
   onlineUsers: [],
   socket: null,
+  verificationId: null,
 
   initializeE2EE: async () => {
     const { authUser } = get();
@@ -43,7 +44,6 @@ export const useAuthStore = create((set, get) => ({
       get().connectSocket();
       await get().initializeE2EE();
     } catch (error) {
-      console.log("Error in checkAuth:", error);
       set({ authUser: null });
     } finally {
       set({ isCheckingAuth: false });
@@ -57,7 +57,7 @@ export const useAuthStore = create((set, get) => ({
       toast.success(res.data.message);
       return res.data;
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(error.response?.data?.message || "Signup failed. Please check your connection.");
       return null;
     } finally {
       set({ isSigningUp: false });
@@ -67,14 +67,16 @@ export const useAuthStore = create((set, get) => ({
   verifySignup: async (data) => {
     set({ isSigningUp: true });
     try {
-      const res = await axiosInstance.post("/auth/verify-signup", data);
+      // Remove mobileOtp from request data as it's now handled by Firebase
+      const { mobileOtp, ...rest } = data;
+      const res = await axiosInstance.post("/auth/verify-signup", rest);
       set({ authUser: res.data });
       toast.success("Account verified and created successfully");
       get().connectSocket();
       await get().initializeE2EE();
       return true;
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(error.response?.data?.message || "Verification failed");
       return false;
     } finally {
       set({ isSigningUp: false });
@@ -90,7 +92,7 @@ export const useAuthStore = create((set, get) => ({
       get().connectSocket();
       await get().initializeE2EE();
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(error.response?.data?.message || "Login failed");
     } finally {
       set({ isLoggingIn: false });
     }
@@ -103,7 +105,7 @@ export const useAuthStore = create((set, get) => ({
       toast.success("Logged out successfully");
       get().disconnectSocket();
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(error.response?.data?.message || "Logout failed");
     }
   },
 
@@ -115,38 +117,20 @@ export const useAuthStore = create((set, get) => ({
       toast.success("Profile updated successfully");
     } catch (error) {
       console.log("error in update profile:", error);
-      toast.error(error.response.data.message);
+      toast.error(error.response?.data?.message || "Profile update failed");
     } finally {
       set({ isUpdatingProfile: false });
     }
   },
 
   sendOtp: async (mobile) => {
-    try {
-      const res = await axiosInstance.post("/auth/send-otp", { mobile });
-      toast.success(res.data.message);
-      return true;
-    } catch (error) {
-      toast.error(error.response.data.message);
-      return false;
-    }
+    toast.error("Mobile OTP login is no longer supported.");
+    return false;
   },
 
   verifyOtp: async (mobile, otp) => {
-    set({ isLoggingIn: true });
-    try {
-      const res = await axiosInstance.post("/auth/verify-otp", { mobile, otp });
-      set({ authUser: res.data });
-      toast.success("Logged in successfully");
-      get().connectSocket();
-      await get().initializeE2EE();
-      return true;
-    } catch (error) {
-      toast.error(error.response.data.message);
-      return false;
-    } finally {
-      set({ isLoggingIn: false });
-    }
+    toast.error("Mobile OTP login is no longer supported.");
+    return false;
   },
 
   connectSocket: () => {
