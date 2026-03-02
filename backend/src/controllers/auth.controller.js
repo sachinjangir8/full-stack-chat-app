@@ -60,25 +60,24 @@ export const signup = async (req, res) => {
     // Send OTPs
     console.log(`Starting OTP delivery for ${email}...`);
 
-    // 1. Send Email OTP (Awaiting to ensure delivery for debugging)
-    console.log(`[Signup] Starting Email OTP delivery for ${email}...`);
-    try {
-      const emailSent = await sendEmailOtp(email, emailOtp);
-      if (emailSent) {
-        console.log("[Signup] Email OTP sent successfully.");
-      } else {
-        console.warn("[Signup] Email OTP failed to send (Returned false).");
-      }
-    } catch (emailError) {
-      console.error("[Signup] Critical error in email delivery flow:", emailError);
-    }
-
-    console.log("[Signup] Process complete, sending response to user.");
+    // Send response first so the UI doesn't hang while waiting for SMTP delivery
     res.status(200).json({
-      message: "Verification OTP has been sent to your email. Please check your inbox (and spam folder).",
+      message: "Processing signup. A verification OTP will be sent to your email shortly.",
       userId: newUser._id,
       email,
       mobile
+    });
+
+    // Send Email OTP in the background
+    console.log(`[Signup] Background: Starting Email OTP delivery for ${email}...`);
+    sendEmailOtp(email, emailOtp).then((success) => {
+      if (success) {
+        console.log(`[Signup] Background: Email OTP for ${email} sent successfully.`);
+      } else {
+        console.warn(`[Signup] Background: Email OTP for ${email} failed to send.`);
+      }
+    }).catch(emailError => {
+      console.error(`[Signup] Background: Critical error in email flow for ${email}:`, emailError);
     });
 
   } catch (error) {

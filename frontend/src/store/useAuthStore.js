@@ -64,12 +64,21 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
+  resendOtp: async (data) => {
+    try {
+      const res = await axiosInstance.post("/auth/signup", data);
+      toast.success("A new verification code has been sent to your email.");
+      return res.data;
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to resend OTP");
+      return null;
+    }
+  },
+
   verifySignup: async (data) => {
     set({ isSigningUp: true });
     try {
-      // Remove mobileOtp from request data as it's now handled by Firebase
-      const { mobileOtp, ...rest } = data;
-      const res = await axiosInstance.post("/auth/verify-signup", rest);
+      const res = await axiosInstance.post("/auth/verify-signup", data);
       set({ authUser: res.data });
       toast.success("Account verified and created successfully");
       get().connectSocket();
