@@ -102,6 +102,7 @@ export const useAuthStore = create((set, get) => ({
       await get().initializeE2EE();
     } catch (error) {
       toast.error(error.response?.data?.message || "Login failed");
+      return error.response?.data;
     } finally {
       set({ isLoggingIn: false });
     }

@@ -141,7 +141,11 @@ export const login = async (req, res) => {
     }
 
     if (!user.isVerified) {
-      return res.status(403).json({ message: "Account not verified. Please sign up again to receive a new verification code." });
+      return res.status(403).json({
+        message: "Account not verified. Redirecting to verification...",
+        userId: user._id,
+        email: user.email
+      });
     }
 
     const isPasswordCorrect = await bcrypt.compare(password, user.password);

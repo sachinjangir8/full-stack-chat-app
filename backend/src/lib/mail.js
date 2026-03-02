@@ -5,14 +5,11 @@ dotenv.config();
 
 const createTransporter = () => {
     return nodemailer.createTransport({
-        host: "smtp.gmail.com",
-        port: 587,
-        secure: false, // Use STARTTLS
+        service: "gmail",
         auth: {
             user: process.env.EMAIL_USER,
             pass: process.env.EMAIL_PASS,
         },
-        connectionTimeout: 10000,
     });
 };
 
@@ -35,6 +32,12 @@ export const sendEmailOtp = async (email, otp) => {
         if (!transporter) transporter = createTransporter();
 
         console.log(`[MailLib] Attempting to send OTP to: ${email}`);
+        // CRITICAL DEBUG: Log the OTP to console so user can bypass if email fails
+        console.log(`
+        -------------------------------------------
+        DEBUG OTP for ${email}: ${otp}
+        -------------------------------------------
+        `);
         const mailOptions = {
             from: `"Chat App Verification" <${process.env.EMAIL_USER}>`,
             to: email,
