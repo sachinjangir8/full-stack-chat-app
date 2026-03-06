@@ -15,27 +15,7 @@ const SignUpPage = () => {
     mobile: "",
   });
 
-  const { signup, isSigningUp, verifySignup, resendOtp } = useAuthStore();
-
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [resendTimer, setResendTimer] = useState(0);
-  const [verificationData, setVerificationData] = useState({
-    userId: null,
-    emailOtp: "",
-  });
-
-  const startResendTimer = () => {
-    setResendTimer(30);
-    const interval = setInterval(() => {
-      setResendTimer((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  };
+  const { signup, isSigningUp } = useAuthStore();
 
   const validateForm = () => {
     if (!formData.fullName.trim()) return toast.error("Full name is required");
@@ -49,94 +29,11 @@ const SignUpPage = () => {
     return true;
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     const success = validateForm();
-    if (success === true) {
-      const data = await signup(formData);
-      if (data) {
-        setVerificationData({ ...verificationData, userId: data.userId });
-        setIsVerifying(true);
-        startResendTimer();
-      }
-    }
+    if (success === true) signup(formData);
   };
-
-  const handleResend = async () => {
-    if (resendTimer > 0) return;
-    const data = await resendOtp(formData);
-    if (data) {
-      setVerificationData({ ...verificationData, userId: data.userId });
-      startResendTimer();
-    }
-  };
-
-  const handleVerificationSubmit = async (e) => {
-    e.preventDefault();
-    if (!verificationData.emailOtp) return toast.error("Please enter Email OTP");
-
-    await verifySignup({ userId: verificationData.userId, emailOtp: verificationData.emailOtp });
-  };
-
-  if (isVerifying) {
-    return (
-      <div className="min-h-screen flex justify-center items-center p-4">
-        <div className="bg-base-100 p-8 rounded-lg shadow-lg w-full max-w-md">
-          <h2 className="text-2xl font-bold mb-2 text-center">Verify Your Account</h2>
-          <p className="text-center text-sm text-base-content/60 mb-6">
-            We've sent a 6-digit code to <span className="font-semibold">{formData.email}</span>.
-            Check your inbox and spam folder.
-          </p>
-
-          <form onSubmit={handleVerificationSubmit} className="space-y-4">
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text font-medium">Email Verification Code</span>
-              </label>
-              <input
-                type="text"
-                maxLength="6"
-                placeholder="000000"
-                className="input input-bordered w-full text-center text-2xl tracking-[12px] font-mono"
-                value={verificationData.emailOtp}
-                onChange={(e) => setVerificationData({ ...verificationData, emailOtp: e.target.value })}
-              />
-            </div>
-
-            <button type="submit" className="btn btn-primary w-full" disabled={isSigningUp}>
-              {isSigningUp ? <Loader2 className="size-5 animate-spin" /> : "Verify & Login"}
-            </button>
-
-            <div className="text-center mt-4">
-              <p className="text-sm text-base-content/60">
-                Didn't receive the code?{" "}
-                {resendTimer > 0 ? (
-                  <span className="text-primary font-medium">Wait {resendTimer}s</span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleResend}
-                    className="link link-primary font-medium"
-                    disabled={isSigningUp}
-                  >
-                    Resend Code
-                  </button>
-                )}
-              </p>
-            </div>
-
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm w-full mt-2"
-              onClick={() => setIsVerifying(false)}
-            >
-              Back to Signup
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2">

@@ -41,43 +41,33 @@ export const signup = async (req, res) => {
       newUser.fullName = fullName;
       newUser.password = hashedPassword;
       newUser.mobile = mobile;
-      newUser.emailOtp = emailOtpHash;
-      newUser.otpExpiry = otpExpiry;
+      newUser.isVerified = true;
     } else {
       newUser = new User({
         fullName,
         email,
         password: hashedPassword,
         mobile,
-        emailOtp: emailOtpHash,
-        otpExpiry,
-        isVerified: false,
+        isVerified: true,
       });
     }
 
     await newUser.save();
 
-    // Send OTPs
-    console.log(`Starting OTP delivery for ${email}...`);
+    // Generate token and login immediately
+    generateToken(newUser._id, res);
 
-    // Send response first so the UI doesn't hang while waiting for SMTP delivery
-    res.status(200).json({
-      message: "Processing signup. A verification OTP will be sent to your email shortly.",
-      userId: newUser._id,
-      email,
-      mobile
-    });
-
-    // Send Email OTP in the background
-    console.log(`[Signup] Background: Starting Email OTP delivery for ${email}...`);
-    sendEmailOtp(email, emailOtp).then((success) => {
-      if (success) {
-        console.log(`[Signup] Background: Email OTP for ${email} sent successfully.`);
-      } else {
-        console.warn(`[Signup] Background: Email OTP for ${email} failed to send.`);
-      }
-    }).catch(emailError => {
-      console.error(`[Signup] Background: Critical error in email flow for ${email}:`, emailError);
+    res.status(201).json({
+      _id: newUser._id,
+      fullName: newUser.fullName,
+      email: newUser.email,
+      mobile: newUser.mobile,
+      profilePic: newUser.profilePic,
+      isGhostMode: newUser.isGhostMode || false,
+      interests: newUser.interests || [],
+      bio: newUser.bio || "",
+      age: newUser.age,
+      gender: newUser.gender || "",
     });
 
   } catch (error) {
@@ -138,14 +128,6 @@ export const login = async (req, res) => {
 
     if (!user) {
       return res.status(400).json({ message: "Invalid credentials" });
-    }
-
-    if (!user.isVerified) {
-      return res.status(403).json({
-        message: "Account not verified. Redirecting to verification...",
-        userId: user._id,
-        email: user.email
-      });
     }
 
     const isPasswordCorrect = await bcrypt.compare(password, user.password);

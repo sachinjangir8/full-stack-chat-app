@@ -54,7 +54,10 @@ export const useAuthStore = create((set, get) => ({
     set({ isSigningUp: true });
     try {
       const res = await axiosInstance.post("/auth/signup", data);
-      toast.success(res.data.message);
+      set({ authUser: res.data });
+      toast.success("Account created successfully");
+      get().connectSocket();
+      await get().initializeE2EE();
       return res.data;
     } catch (error) {
       toast.error(error.response?.data?.message || "Signup failed. Please check your connection.");
@@ -65,31 +68,13 @@ export const useAuthStore = create((set, get) => ({
   },
 
   resendOtp: async (data) => {
-    try {
-      const res = await axiosInstance.post("/auth/signup", data);
-      toast.success("A new verification code has been sent to your email.");
-      return res.data;
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to resend OTP");
-      return null;
-    }
+    toast.error("OTP verification is disabled.");
+    return null;
   },
 
   verifySignup: async (data) => {
-    set({ isSigningUp: true });
-    try {
-      const res = await axiosInstance.post("/auth/verify-signup", data);
-      set({ authUser: res.data });
-      toast.success("Account verified and created successfully");
-      get().connectSocket();
-      await get().initializeE2EE();
-      return true;
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Verification failed");
-      return false;
-    } finally {
-      set({ isSigningUp: false });
-    }
+    toast.error("OTP verification is disabled.");
+    return false;
   },
 
   login: async (data) => {
