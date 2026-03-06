@@ -57,8 +57,10 @@ console.log(`[Server] process.cwd(): ${process.cwd()}`);
 // Debug: List directory content to see where we are on Render
 try {
   console.log(`[Server] Contents of ${projectRoot}:`, fs.readdirSync(projectRoot));
-  const parentOfRoot = path.resolve(projectRoot, "..");
-  console.log(`[Server] Contents of ${parentOfRoot}:`, fs.readdirSync(parentOfRoot));
+  const frontendPath = path.join(projectRoot, "frontend");
+  if (fs.existsSync(frontendPath)) {
+    console.log(`[Server] Contents of ${frontendPath}:`, fs.readdirSync(frontendPath));
+  }
 } catch (e) {
   console.log("[Server] Could not list directories:", e.message);
 }
