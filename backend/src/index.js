@@ -24,7 +24,6 @@ import fs from "fs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const projectRoot = path.join(__dirname, "../..");
 
 app.use(express.json({ limit: "10mb" }));
 app.set("trust proxy", 1);
@@ -48,11 +47,30 @@ app.use("/api/calls", callRoutes);
 app.use("/api/groups", groupRoutes);
 app.use("/api/discovery", discoveryRoutes);
 
+// In many Render setups, the root is where parent folder is
+const projectRoot = path.resolve(__dirname, "../../");
+
+console.log(`[Server] __dirname: ${__dirname}`);
+console.log(`[Server] projectRoot: ${projectRoot}`);
+console.log(`[Server] process.cwd(): ${process.cwd()}`);
+
+// Debug: List directory content to see where we are on Render
+try {
+  console.log(`[Server] Contents of ${projectRoot}:`, fs.readdirSync(projectRoot));
+  const parentOfRoot = path.resolve(projectRoot, "..");
+  console.log(`[Server] Contents of ${parentOfRoot}:`, fs.readdirSync(parentOfRoot));
+} catch (e) {
+  console.log("[Server] Could not list directories:", e.message);
+}
+
 if (process.env.NODE_ENV === "production") {
   const distPath = path.join(projectRoot, "frontend/dist");
   const indexPath = path.join(distPath, "index.html");
 
+  console.log(`[Server] Checking distPath: ${distPath}`);
+
   if (fs.existsSync(distPath)) {
+    console.log("[Server] Found distPath. Serving static files.");
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
       if (fs.existsSync(indexPath)) {
@@ -62,8 +80,20 @@ if (process.env.NODE_ENV === "production") {
       }
     });
   } else {
-    console.warn(`[Server] Production Mode: Frontend dist not found at ${distPath}. API only mode enabled.`);
-    app.get("/", (req, res) => res.status(200).json({ message: "Chat App API is running. Frontend build missing." }));
+    // Try one more common Render path if the monorepo structure is flattened
+    const altDistPath = path.join(process.cwd(), "frontend/dist");
+    console.log(`[Server] distPath not found. Checking altDistPath: ${altDistPath}`);
+
+    if (fs.existsSync(altDistPath)) {
+      console.log("[Server] Found altDistPath. Serving static files.");
+      app.use(express.static(altDistPath));
+      app.get("*", (req, res) => {
+        res.sendFile(path.join(altDistPath, "index.html"));
+      });
+    } else {
+      console.warn(`[Server] Production Mode: Frontend dist not found. API only mode enabled.`);
+      app.get("/", (req, res) => res.status(200).json({ message: "Chat App API is running. Frontend build missing." }));
+    }
   }
 }
 
